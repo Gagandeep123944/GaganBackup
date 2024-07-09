@@ -1,0 +1,359 @@
+<odoo>
+    <template id="vpersonalize_shipping_cart_lines" inherit_id="website_sale.cart_lines"> 
+        
+        <xpath expr="//t[@t-name='website_sale.cart_lines']" position="replace"> 
+            <t name="Shopping Cart Lines" t-name="website_sale.cart_lines">
+                <div t-if="not website_sale_order or not website_sale_order.website_order_line" class="js_cart_lines alert alert-info">
+                    Your cart is empty!
+                </div>
+                <t t-if="website_sale_order">
+                    <div t-if="website_sale_order._get_shop_warning(clear=False)" class="alert alert-warning js_cart_lines" role="alert">
+                        <strong>Warning!</strong> <t t-esc="website_sale_order._get_shop_warning()"/>
+                    </div>
+                </t>
+                <div id="cart_products" t-if="website_sale_order and website_sale_order.website_order_line" class="js_cart_lines d-flex flex-column mb32">
+                    <t t-set="show_qty" t-value="is_view_active('website_sale.product_quantity')"/>
+                    <div t-foreach="website_sale_order.website_order_line" t-as="line" t-attf-class="o_cart_product d-flex align-items-stretch gap-3 #{line.linked_line_id and 'optional_product info'} #{not line_last and 'border-bottom pb-4'} #{line_index &gt; 0 and 'pt-4'}" t-attf-data-product-id="#{line.product_id and line.product_id.id}">
+                        <t t-if="line.product_id">
+                            <t t-set="description_lines" t-value="line.get_description_following_lines()"/>
+                            <div t-if="description_lines" t-attf-class="text-muted {{div_class}} small">
+                                <t t-foreach="description_lines" t-as="name_line">
+                                    <t t-if="'Vpersonalize Thumbnail: Url: ' in name_line">
+                                        <!-- Remove 'Vpersonalize Thumbnail: Url: ' from name_line -->
+                                        <t t-set="thumbnail_url" t-value="name_line.replace('Vpersonalize Thumbnail: Url: ', '')"/>
+                                    </t>
+                                    <t t-if="'Vpersonalize Edit: Id: ' in name_line">
+                                        <!-- Remove 'Vpersonalize Thumbnail: Url: ' from name_line -->
+                                        <t t-set="vpersonalize_edit_id" t-value="name_line.replace('Vpersonalize Edit: Id: ', '')"/>
+                                    </t>
+                                    <t t-if="'Vpersonalize: Token: ' in name_line">
+                                        <!-- Remove 'Vpersonalize Thumbnail: Url: ' from name_line -->
+                                        <t t-set="vpersonalize_token" t-value="name_line.replace('Vpersonalize: Token: ', '')"/>
+                                    </t>
+                                </t>
+                            </div>
+
+                            <t t-if="request.env.user and request.env.user.id and request.env.user.email">
+                                <t t-set="saved_design" t-value="request.env['vpersonalize.saved_design'].sudo().search([('cart_item_id', '=', line.id), ('user_id', '=', request.env.user.id)])" />
+                            </t>
+
+                            
+
+                            
+                            <t t-set="selected_size" t-value="line.product_id.product_template_attribute_value_ids.filtered(lambda v: v.attribute_id.name == 'Size')"/>
+
+                            
+                            <t t-foreach="line.product_id.valid_product_template_attribute_line_ids" t-as="ptal">
+                                <t t-if="ptal.attribute_id.name == 'Size'">
+                                    <t t-foreach="ptal.product_template_value_ids._only_active()" t-as="ptav">
+                                                <t t-set="size_quanity" t-value="selected_size.id == ptav.id and line.product_uom_qty"/>
+
+                                        <input type="hidden" class="size_variant" t-att-size-value="selected_size.id" t-att-size-quanity="size_quanity" t-att-size-id="ptav.id" t-att-size-name="ptav.name" t-att-name="'sizes_cart[' + str(ptav.id) + ']'"/>
+                                    </t>
+                                </t>
+                            </t>
+                            
+                    
+                            <t t-if="thumbnail_url"> 
+                              
+                                <img t-att-src="thumbnail_url" class="o_image_64_max img rounded thumbnail_url" t-att-alt="line.name_short"/>
+
+                            </t>
+                            <t t-elif="line._is_not_sellable_line() and line.product_id.image_128">
+                                <img t-att-src="image_data_uri(line.product_id.image_128)" class="o_image_64_max img rounded" t-att-alt="line.name_short"/>
+                            </t>
+                           
+                            <div t-else="" t-field="line.product_id.image_128" t-options="{'widget': 'image', 'qweb_img_responsive': False, 'class': 'o_image_64_max rounded'}"/>
+                            <div class="flex-grow-1">
+                                <t t-call="website_sale.cart_line_product_link">
+                                    <h6 t-field="line.name_short" class="d-inline align-top h6 fw-bold"/>
+                                </t>
+                                <div style="display:none">
+                                    <t t-call="website_sale.cart_line_description_following_lines">
+                                        <t t-set="div_class" t-valuef="d-none d-md-block"/>
+                                    </t>
+                                </div>
+                                <div class="combinator">
+                                    <a href="#" class="js_delete_product d-none d-md-inline-block small" aria-label="Remove from cart" title="Remove from cart"><i class="fa-solid fa-trash" style="color: #e41b22;"></i></a>
+                                    <button class="js_delete_product btn btn-light d-inline-block d-md-none" title="remove">
+                                        <i class="fa fa-trash-o"/>
+                                    </button>
+                                    <t t-if="vpersonalize_token">
+                                       <t t-set="base_url" t-value="line.product_id.website_url.split('#')[0]"/>
+                                        <t t-set="fragment" t-value="line.product_id.website_url.split('#')[1]"/>
+
+                                         <div class="btn-continainer">
+                                            <a  t-att-data-design-token="vpersonalize_token" t-att-data-design-id="vpersonalize_edit_id" t-att-data-size-id="selected_size.id"  t-att-href-update="base_url + '?vpersonalize_token=' + vpersonalize_token + '&amp;vpersonalize_edit_id=' + vpersonalize_edit_id + '&amp;edit_quantity=true#' + fragment" t-att-href="base_url + '?vpersonalize_token=' + vpersonalize_token + '&amp;vpersonalize_edit_id=' + vpersonalize_edit_id + '&amp;edit_design=true#' + fragment" class="btn btn-secondary mt-3 edit_line_item d-md-inline-block small" aria-label="Edit Cart Item" title="Edit Cart Item">Edit <i class="fa-solid fa-pen-to-square edit_icon"></i></a>
+                                            <t t-if="request.env.user and request.env.user.id and request.env.user.email">
+                                <t t-set="saved_design" t-value="request.env['vpersonalize.saved_design'].sudo().search([('cart_item_id', '=', line.id), ('user_id', '=', request.env.user.id)])" />
+                            </t>
+
+                                             <t t-if="saved_design">
+                                                 
+                                                <a class="btn btn-success disabled mt-3 save_line_item d-md-inline-block small" t-att-disabled="true" t-att-data-design-token="vpersonalize_token" t-att-data-design-id="vpersonalize_edit_id" t-att-add-back-url="base_url + '?vpersonalize_token=' + vpersonalize_token + '&amp;vpersonalize_edit_id=' + vpersonalize_edit_id + '&amp;add_saved_design=true#' + fragment" t-att-data-size-id="selected_size.id" title="Save Cart Item" t-att-data="request.env.user.id">Saved for Reorder <i class="fa-solid fa-bookmark saved_reorder"></i></a>
+                                            </t>
+                                            <t t-else="">
+                                               <t t-if="request.env.user and request.env.user.id and request.env.user.email">
+                                                    <t t-set="saved_design_class" t-value="'btn btn-secondary mt-3 d-md-inline-block small save_line_item'" />
+                                                </t>
+                                                <t t-else="">
+                                                    <t t-set="saved_design_class" t-value="'btn btn-secondary mt-3 d-md-inline-block small save_design_without_login'" />
+                                                </t>
+                                                <a t-att-class="saved_design_class"
+                                                   t-att-data-design-token="vpersonalize_token"
+                                                   t-att-data-design-id="vpersonalize_edit_id"
+                                                   t-att-data-back-url="base_url + '?vpersonalize_token=' + vpersonalize_token + '&amp;vpersonalize_edit_id=' + vpersonalize_edit_id + '&amp;add_saved_design=true#' + fragment"
+                                                   t-att-data-size-id="selected_size.id"
+                                                   title="Save Cart Item"
+                                                   t-att-data="request.env.user.id">Save for Reorder <i class="fa-regular fa-bookmark save_reorder"></i></a>
+
+
+                                            </t>
+                            
+                                             
+
+                                        </div>
+
+                                      
+                                    </t>
+                                </div>
+                            </div>
+                            
+                            <div class="d-flex flex-column align-items-end">
+                                <div t-attf-class="css_quantity input-group mb-2" name="website_sale_cart_line_quantity">
+                                    <t t-if="not line._is_not_sellable_line()">
+                                        <t t-if="show_qty">
+                                            <a href="#" class="js_add_cart_json btn btn-link d-inline-block border-end-0" aria-label="Remove one" title="Remove one">
+                                                <i class="position-relative z-index-1 fa fa-minus"/>
+                                            </a>
+                                            <input type="text" class="js_quantity quantity form-control border-start-0 border-end-0" t-att-data-line-id="line.id" t-att-data-product-id="line.product_id.id" t-att-value="int(line.product_uom_qty) == line.product_uom_qty and int(line.product_uom_qty) or line.product_uom_qty"/>
+                                            <t t-if="line._get_shop_warning(clear=False)">
+                                                <a href="#" class="btn btn-link">
+                                                <i class="fa fa-warning text-warning" t-att-title="line._get_shop_warning()" role="img" aria-label="Warning"/>
+                                                </a>
+                                            </t>
+                                            <a t-else="" href="#" class="js_add_cart_json d-inline-block float_left btn btn-link border-start-0" aria-label="Add one" title="Add one">
+                                                <i class="fa fa-plus position-relative z-index-1"/>
+                                            </a>
+                                        </t>
+                                        <t t-else="">
+                                            <input type="hidden" class="js_quantity form-control quantity" t-att-data-line-id="line.id" t-att-data-product-id="line.product_id.id" t-att-value="int(line.product_uom_qty) == line.product_uom_qty and int(line.product_uom_qty) or line.product_uom_qty"/>
+                                        </t>
+                                    </t>
+                                    <t t-else="">
+                                        <span class="w-100 text-muted" t-esc="int(line.product_uom_qty)"/>
+                                        <input type="hidden" class="js_quantity quantity form-control" t-att-data-line-id="line.id" t-att-data-product-id="line.product_id.id" t-att-value="line.product_uom_qty"/>
+                                    </t>
+                                </div>
+                                <div class="mb-0 h6 fw-bold text-end" name="website_sale_cart_line_price">
+                                    <t t-if="line.discount">
+                                        <del t-attf-class="#{'text-danger mr8'}" style="white-space: nowrap;" t-out="line.price_unit * line.product_uom_qty" t-options="{'widget': 'monetary', 'display_currency': website.currency_id}"/>
+                                    </t>
+                                    <t t-if="website.show_line_subtotals_tax_selection == 'tax_excluded'" t-set="product_price" t-value="line.price_subtotal"/>
+                                    <t t-else="" t-set="product_price" t-value="line.price_total"/>
+                                    <span t-out="product_price" style="white-space: nowrap;" t-options="{'widget': 'monetary', 'display_currency': website_sale_order.currency_id}"/>
+                                    <small t-if="not line._is_not_sellable_line() and line.product_id.base_unit_price" class="cart_product_base_unit_price d-block text-muted" groups="website_sale.group_show_uom_price">
+                                        <t t-call="website_sale.base_unit_price">
+                                            <t t-set="product" t-value="line.product_id"/>
+                                            <t t-set="combination_info" t-value="{'base_unit_price': product._get_base_unit_price(product_price/line.product_uom_qty)}"/>
+                                        </t>
+                                    </small>
+                                </div>
+                            </div>
+                        </t>
+                    </div>
+                </div>
+                 <div id="popup" class="custom-popup">
+                  <div class="custom-popup-content">
+                    <span class="custom-close"/>
+                    <div class="">
+                        <table class="update_variation_form">
+                                <tbody class="v_tbody">
+		                            <tr class="image_size_container">
+		                                <td class="image_td">
+		                                    <img class="thumbnail_image_for_edit"/>
+                                            
+		                                </td>
+		                                <td class="size_td">
+		                                    <div class="row container-heading-bulk variant_sizes">
+		                                        
+		                                    </div>
+		                                </td>
+		                                
+		                            </tr>
+		                            <tr class="button_container_tr">
+		                                <td>
+    		                                <div class="button_contianer">
+    		                                    <button class="btn btn-primary" type="button" id="cancel_popup">Cancel</button>
+    		                                    
+    		                                </div>
+		                                </td>
+		                                <td class="button_container_td">
+    		                                <div class="button_contianer">
+    		                                    
+    		                                    <button class="btn btn-secondary" type="button" id="update_cart_item">Update</button>
+    		                                    <a class="btn btn-success" id="edit_design_tag">Design</a>
+    		                                </div>
+		                                </td>
+		                            </tr>
+		                         </tbody>
+                        </table>
+                    </div>
+                  </div>
+                </div>
+                 <style>
+                    div#popup {
+                        display: none;
+                        height: 100vh;
+                        width: 100vw;
+                        position: fixed;
+                        background: #1413133d;
+                        top: 0px;
+                        left: 0px;
+                        z-index: 99999999;
+                        justify-content: center;
+                        align-items: center;
+                    }
+                    .v_tbody{
+                            display: flex;
+                            flex-direction: column;
+                    }
+                    
+                    .image_size_container {
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        width: 100%;
+                        /* flex-direction: column; */
+                    }
+                    
+                    .button_container_td {
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        gap: 40px;
+                    }
+                    
+                    .custom-popup-content {
+                        background: #fff;
+                        padding: 20px;
+                        border-radius: 0.35rem;
+                        position: relative;
+                        min-width: 50%;
+                        min-height: 50%;
+                    }
+                    
+                    span.custom-close:before {
+                        color: red;
+                        content: '❌';
+                        display: block;
+                        position: absolute;
+                        right: 10px;
+                        top: 10px;
+                        cursor: pointer;
+                    }
+                    
+                    
+                    
+                    .container-heading-bulk {
+                        margin-top: 15px;
+                        margin-bottom: 30px;
+                        min-width: 100%;
+                    }
+                    .div-cont {
+                        display: flex !important;
+                        align-items: center !important;
+                        justify-content: center !important;
+                        gap: 12px;
+                        padding: 0px !important;
+                        padding-right: 5px !important;
+                        margin-bottom: 20px !important;
+                    }
+                    .heading-c-bulk {
+                        white-space: nowrap;
+                        font-weight: 600;
+                        display: block;
+                        font-size: 15px;
+                        color: #000;
+                        min-width: 25px;
+                    }
+                    .input-container-bulk input {
+                        border-radius: 5px;
+                        border: 1px solid #E6E6E6;
+                        background: #FFF;
+                        width: 42px;
+                        height: 32px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        color: #333;
+                        text-align: center;
+                        font-size: 12px;
+                        font-style: normal;
+                        font-weight: 500;
+                        line-height: 24px;
+                        text-align: center;
+                        MARGIN-BOTTOM: 0PX;
+                        width: 42px;
+                    }
+                    .input-container-bulk input:focus{
+                        outline:none;
+                    }
+                    .bulk-input::-webkit-outer-spin-button,
+                    .bulk-input::-webkit-inner-spin-button {
+                      -webkit-appearance: none;
+                      margin: 0;
+                    }
+                    
+                    .button_contianer {
+                        display: flex;
+                        width: 100%;
+                        gap: 20px;
+                        justify-content: left;
+                        align-items: center;
+                    }
+
+                    img.thumbnail_image_for_edit {
+                        height: 100%;
+                        width: 100%;
+                        max-width:300px;
+                    }
+                    .image_td, .size_td {
+                        width: 100%;
+                        /* position: relative; */
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                    }
+                    
+                    tr.button_container_tr {
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        gap: 50px;
+                    }
+
+                    @media only screen and (max-width: 600px) {
+                        .image_size_container {
+                           
+                            flex-direction: column;
+                        }
+                    }
+
+
+
+                </style>
+                <script type="text/javascript" src="/Vpersonalize/static/src/cart.js"/>
+                <script type="text/javascript" src="/Vpersonalize/static/src/sweetalert.js"/>
+            </t> 
+        </xpath>
+
+        
+    </template>
+</odoo>
+
+
+
+            
+                    
+    
