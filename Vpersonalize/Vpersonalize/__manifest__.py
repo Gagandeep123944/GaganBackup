@@ -1,0 +1,25 @@
+{
+    'name': 'Vpersonalize',
+    'version': '1.0',
+    'summary': '',
+    'description': 'Long description of your module',
+    'author': 'Vansh Pratap Rajpoot',
+    'website': 'https://www.example.com',
+    'depends': ['base','sale','website_sale'],
+    'data': [
+        'views/product/product.xml',
+        'views/product/variants.xml',
+        'views/my/saved_design.xml',
+        'views/cart/cart_shipping_cart_lines.xml',
+        'views/cart/cart.xml',
+        'views/my/home.xml',
+        'views/my/orders/order_content.xml',
+        'views/my/orders/order_document.xml',
+        'views/layout/head.xml',
+        'views/auth/login.xml',
+        'views/auth/signup.xml',
+        'views/mrp_production_view.xml',
+        'views/auth/resetpassword.xml'
+    ],
+    'application': True,
+}
